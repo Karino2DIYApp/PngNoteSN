@@ -91,10 +91,10 @@ class BitmapIO(private val resolver: ContentResolver) {
         }
     }
 
-    fun loadBitmapThumbnail(file: FastFile, sampleSize: Int) : Bitmap {
-        return resolver.openFileDescriptor(file.uri, "r").use {
+    fun loadBitmapThumbnail(file: FastFile, sampleSize: Int) : Bitmap? {
+        return resolver.openFileDescriptor(file.uri, "r")?.use {
             val option = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-            BitmapFactory.decodeFileDescriptor(it!!.fileDescriptor, null, option)
+            BitmapFactory.decodeFileDescriptor(it.fileDescriptor, null, option)
         }
     }
 

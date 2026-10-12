@@ -85,7 +85,7 @@ class PageGridActivity: ComponentActivity() {
     private fun requestLoadPages() {
         lifecycleScope.launch(Dispatchers.IO) {
             book.pages.forEachIndexed { idx, bmpfile ->
-                val bitmap = pageIO.loadPageThumbnail(bmpfile)
+                val bitmap = pageIO.loadPageThumbnail(bmpfile) ?: PageGridData.blankBitmap
                 withContext(Dispatchers.Main) {
                     pageList.value = pageList.value.mapIndexed {idx2, page -> if(idx==idx2) page.copy(thumbnail = bitmap) else page }
                 }
