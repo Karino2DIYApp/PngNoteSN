@@ -170,7 +170,7 @@ class BookActivity : ComponentActivity() {
                     isDirty = false
                     withLock {
                         val bmp = backend.bitmap
-                        Pair(lastUpdatedPageInfo, bmp.copy(bmp.config, false))
+                        Pair(lastUpdatedPageInfo, bmp.copy(bmp.config!!, false))
                     }!!
                 }
                 if (pinfoSnapshot.idx != -1)
@@ -296,11 +296,9 @@ class BookActivity : ComponentActivity() {
 
     var finishListener : ()->Unit = {}
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent?.let {
-            handlePageIdxArg(it)
-        }
+        handlePageIdxArg(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

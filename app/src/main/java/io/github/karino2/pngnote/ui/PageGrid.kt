@@ -2,6 +2,7 @@ package io.github.karino2.pngnote.ui
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
@@ -47,8 +49,11 @@ class PageGridData(private val pages: List<Page>) {
 
 @Composable
 fun OnePage(pageSize : Pair<Dp, Dp>, title: String, thumbnail: ImageBitmap, bgImage: ImageBitmap?, onOpenPage : ()->Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier= Modifier
-        .clickable(onClick = onOpenPage)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier= Modifier.clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = LocalIndication.current,
+        onClick = onOpenPage
+    )) {
         Canvas(modifier= Modifier
             .size(pageSize.first, pageSize.second)
             .padding(2.dp, 2.dp)) {
