@@ -45,7 +45,7 @@ class EinkPenCanvas(context: Context, attributeSet: AttributeSet) : View(context
 
         if (!einkPW.isEnabled) {
             einkPW.open()
-            einkPW.setPen(PenType.PENCIL, 4, Color.BLACK)
+            einkPW.setPen(PenType.INK, 8f, Color.BLACK)
             einkPW.setWritableRect(limit)
             lastOpenedLimit = Rect(limit)
 

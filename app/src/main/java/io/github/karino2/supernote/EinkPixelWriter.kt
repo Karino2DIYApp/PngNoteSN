@@ -29,6 +29,7 @@ class EinkPixelWriter(val host: View, val onStrokeFinished: (Bitmap, Rect) -> Un
 
     fun toJavaType(jclass: Class<*>) : Class<*> {
         return when(jclass.name) {
+            "java.lang.Float" -> Float::class.java
             "java.lang.Integer" -> Integer.TYPE
             "java.lang.Boolean" -> Boolean::class.java
             "java.lang.String" -> String::class.java
@@ -64,18 +65,19 @@ class EinkPixelWriter(val host: View, val onStrokeFinished: (Bitmap, Rect) -> Un
         invoke("setPenType", ptype.value)
     }
 
-    fun setPenWidth(width: Int) {
-        invoke("setPenSettingWidth", width)
+    fun setPenWidth(width: Float) {
+        // invoke("setPenSettingWidth", width)
+        invoke("setPenStdWidth", width)
     }
 
     fun setPenColor(color: Int) {
         invoke("setPenColor", color)
     }
 
-    fun setPen(penType: PenType, penWidth: Int, penColor: Int) {
+    fun setPen(penType: PenType, penWidth: Float, penColor: Int) {
         setPenType(penType)
-        setPenWidth(penWidth)
         setPenColor(penColor)
+        setPenWidth(penWidth)
     }
 
     fun _setEnabled(enabled: Boolean) {

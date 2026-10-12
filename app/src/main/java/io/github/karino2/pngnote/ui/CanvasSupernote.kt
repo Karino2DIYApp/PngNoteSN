@@ -24,15 +24,15 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
         EinkPixelWriter(this, ::onHardwareStrokeFinished)
     }
 
-    private val pencilWidth = 4
-    private val eraserWidth = 50
+    private val pencilWidth = 8f
+    private val eraserWidth = 20f
 
     // pencilと呼んでいるが本当はink、あとで直す
     private var isPencil = true
     private val isEraser : Boolean
         get() = !isPencil
 
-    private val strokeWidth: Int
+    private val strokeWidth: Float
         get() = if(isPencil) pencilWidth else eraserWidth
 
     private val strokeColor: Int
@@ -109,6 +109,10 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
 
     private var _requestRawDrawingPending = false
 
+    fun setPen(pwidth: Float, pcolor: Int) {
+        einkPW.setPen(PenType.INK, pwidth, pcolor)
+    }
+
     private fun applyRawDrawingSettings() {
         val limit = visibleRect()
         if (limit.width() <= 0 || limit.height() <= 0) return
@@ -120,7 +124,7 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
 
         if (!einkPW.isEnabled) {
             einkPW.open()
-            einkPW.setPen(PenType.INK, strokeWidth, strokeColor)
+            setPen( strokeWidth, strokeColor)
             einkPW.setWritableRect(limit)
             lastOpenedLimit = Rect(limit)
 
@@ -263,7 +267,7 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
     }
 
     private fun applyPenSettingChanged() {
-        einkPW.setPen(PenType.INK, strokeWidth, strokeColor)
+        setPen(strokeWidth, strokeColor)
         syncBackendToSurface()
     }
 
