@@ -90,7 +90,6 @@ class UndoableBackend {
         /*
         bmpBackend.drawBitmap(newBmp, region, region)
         notifyBitmapUpdate()
-
          */
     }
 
@@ -114,7 +113,12 @@ class UndoableBackend {
         notifyBitmapUpdate()
     }
 
-    fun drawBitmap(newBmp: Bitmap) = bmpBackend.drawBitmap(newBmp)
+    fun drawBitmap(newBmp: Bitmap) {
+        if (!bmpbackendInitialized)
+            ensureSize(newBmp.width, newBmp.height)
+
+        bmpBackend.drawBitmap(newBmp)
+    }
     fun clear() = bmpBackend.clear()
     fun resize(width: Int, height: Int) = ensureSize(width, height)
 
