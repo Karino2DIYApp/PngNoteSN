@@ -124,7 +124,7 @@ class EinkPixelWriter(val host: View, val onStrokeFinished: (Bitmap, Rect) -> Un
     }
 
     fun clearRect(rect: Rect?) {
-        methodT("clearContent", Rect::class.java, Boolean::class.java, Boolean::class.java).invoke(pwObj, rect, true, true)
+        methodT("clearContent", Rect::class.java, Boolean::class.java, Boolean::class.java).invoke(pwObj, rect, false, false)
     }
 
     private fun setPWBitmap(bitmap: Bitmap) {
