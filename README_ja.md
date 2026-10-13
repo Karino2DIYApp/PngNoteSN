@@ -1,42 +1,28 @@
-![PngNote icon](https://github.com/karino2/PngNote/raw/main/images/ic_launcher.png)
+![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/ic_launcher.png)
 
-PngNoteは、BOOX用のフリーでオープンソースな手書きノートアプリです。
-[BOOX SDK](https://github.com/onyx-intl/OnyxAndroidDemo/blob/master/doc/Onyx-Pen-SDK.md)を使ってraw renderingモードで動くので、プレインストールのアプリと同じレベルのスタイラスのラグで書く事が出来ます。
+PngNoteSNは、Supernote用のフリーでオープンソースな手書きノートアプリです。
+EinkPWInterfaceを使って比較的高速なスタイラスでノートがとれます。
 
-機能的には必要最小限で、鉛筆と消しゴム、undo、redoのみで、その分ツールやモードを切り替えたりせずにノートを取るのに集中出来るようにと考えて作りました。
+機能的には必要最小限で、鉛筆と消しゴム、undo、redo、半ページシフトのみで、その分ツールやモードを切り替えたりせずにノートを取るのに集中出来るようにと考えて作りました。
 
 また、データ・フォーマットが連番のpngファイルで、ブックは通常のフォルダになっています。
 お好みのフォルダシンク出来るアプリを使う事で、exportなどせず常時ノートをPCなどと共有出来ますし、pngなので将来に渡って見る事が出来ます。
 
-# 対応デバイス
+## Download apk
 
-以下のデバイスでは動く、と聞いています。
+リリースの所からapkをダウンロードしてインストールしてください。 [https://github.com/Karino2DIYApp/PngNoteSN/releases](https://github.com/Karino2DIYApp/PngNoteSN/releases)
 
-- BOOX Note3
-- BOOX Note2
-- BOOX Note Air
-- Nova2
+## Screen shots
 
-以下のデバイスでは動かないそうです。
+![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/BookList.png)
+![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/Book.png)
+![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/PageGrid.png)
 
-- Poke3
+## 制限
 
-たぶんPokeシリーズ以外のBOOXのデバイスなら動くと思っています。
+SupernoteのEinkPWInterfaceの仕様とうまくあわせる事が出来なかった為、background.pngの機能は動きません。
 
-また、一応BOOX以外の通常のAndroidでも動くバージョンのブランチはあります。（要望があればapkも置きます）
-
-# Download apk
-
-リリースの所からapkをダウンロードしてインストールしてください。 [https://github.com/karino2/PngNote/releases](https://github.com/karino2/PngNote/releases)
-
-# Screen shots
-
-![PngNote icon](https://github.com/karino2/PngNote/raw/main/images/BookList.png)
-![PngNote icon](https://github.com/karino2/PngNote/raw/main/images/Book.png)
-![PngNote icon](https://github.com/karino2/PngNote/raw/main/images/PageGrid.png)
-
-
-# Licensing
+## Licensing
 
 ### Code
 
