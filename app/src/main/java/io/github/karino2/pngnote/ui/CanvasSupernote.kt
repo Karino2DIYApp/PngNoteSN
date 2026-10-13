@@ -25,7 +25,7 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
     }
 
     private val pencilWidth = 8f
-    private val eraserWidth = 20f
+    private val eraserWidth = 120f
 
     // pencilと呼んでいるが本当はink、あとで直す
     private var isPencil = true
