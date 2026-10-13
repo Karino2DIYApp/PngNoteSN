@@ -18,7 +18,7 @@ import java.util.Date
 import kotlin.math.abs
 
 @SuppressLint("ViewConstructor")
-class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBackend, var initialBmp: Bitmap? = null, private val background: Bitmap?, initialPageIdx:Int  = 0) : View(context) {
+class CanvasSupernote(context: Context, private val backend: UndoableBackend, var initialBmp: Bitmap? = null, private val background: Bitmap?, initialPageIdx:Int  = 0) : View(context) {
 
     val einkPW by lazy {
         EinkPixelWriter(this, ::onHardwareStrokeFinished)
@@ -49,7 +49,7 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
     fun undo(count : Int) {
         if (undoCount != count) {
             undoCount = count
-            bitmapBackend.undo()
+            backend.undo()
             refreshAfterUndoRedo()
         }
     }
@@ -57,13 +57,13 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
     fun redo(count: Int) {
         if(redoCount != count) {
             redoCount = count
-            bitmapBackend.redo()
+            backend.redo()
             refreshAfterUndoRedo()
         }
     }
 
     fun onHardwareStrokeFinished(bitmap: Bitmap, dirty: Rect) {
-        bitmapBackend.updateRegion(bitmap, dirty)
+        backend.updateRegion(bitmap, dirty)
         // これが無いとrefreshした時にクリアされたバックエンドのバッファで上書きされてしまう。
         einkPW.clearTransient(dirty)
         // isBackendDirty = true
@@ -75,16 +75,16 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
     ただ単にinvalidateでも良さそうな場所もあるので、あとで調べてrenameする。
      */
     private fun syncBackendToSurface() {
-        bitmapBackend.withLock {
-            einkPW.loadBitmap(bitmapBackend.bitmap)
+        backend.withLock {
+            einkPW.loadBitmap(backend.bitmap)
         }
         invalidate() // 多分いらない。あとで消して確認
     }
 
 
     private fun refreshAfterUndoRedo() {
-        bitmapBackend.notifyBitmapUpdate()
-        bitmapBackend.notifyUndoStateChanged()
+        backend.notifyBitmapUpdate()
+        backend.notifyUndoStateChanged()
         syncBackendToSurface()
     }
 
@@ -128,8 +128,8 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
             einkPW.setWritableRect(limit)
             lastOpenedLimit = Rect(limit)
 
-            bitmapBackend.withLock {
-                einkPW.loadBitmap(bitmapBackend.bitmap)
+            backend.withLock {
+                einkPW.loadBitmap(backend.bitmap)
             }
         } else {
             einkPW.setWritableRect(limit)
@@ -166,7 +166,7 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
     private val borderPaint = Paint().apply { color = Color.LTGRAY }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        bitmapBackend.resize(w, h)
+        backend.resize(w, h)
         super.onSizeChanged(w, h, oldw, oldh)
         if (_requestRawDrawingPending)
         {
@@ -174,17 +174,17 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
             applyRawDrawingSettings()
         }
         initialBmp?.let {
-            bitmapBackend.drawBitmap(it)
+            backend.drawBitmap(it)
             initialBmp = null
         }
     }
 
     override fun onDraw(canvas: Canvas) {
-        if (!bitmapBackend.isReady)
+        if (!backend.isReady)
             return
 
-        bitmapBackend.withLock {
-            canvas.drawBitmap(bitmapBackend.bitmap, 0f, 0f, null);
+        backend.withLock {
+            canvas.drawBitmap(backend.bitmap, 0f, 0f, null);
         }
         if(shiftHalf) {
             // 真ん中-2pxから2pxの太さのボーダーラインをborderPaintで描く
@@ -331,17 +331,17 @@ class CanvasSupernote(context: Context, private val bitmapBackend: UndoableBacke
         this.shiftHalf = pageInfo.shift
 
         val newbmp = bitmapLoader(pageInfo)
-        bitmapBackend.setupNewPage(width, height, newbmp)
+        backend.setupNewPage(width, height, newbmp)
 
         syncBackendToSurface()
     }
 
     fun setOnUpdateListener(updateBmpListener: () -> Unit) {
-        bitmapBackend.updateBmpListener = updateBmpListener
+        backend.updateBmpListener = updateBmpListener
     }
 
     fun setOnUndoStateListener(undoStateListener: (undo:Boolean, redo:Boolean) -> Unit) {
-        bitmapBackend.undoStateListener = undoStateListener
+        backend.undoStateListener = undoStateListener
     }
 
     fun onFinish() {
