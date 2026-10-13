@@ -6,41 +6,12 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.IconToggleButton
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import io.github.karino2.fastfile.FastFile
@@ -49,19 +20,16 @@ import io.github.karino2.pngnote.book.BookIO
 import io.github.karino2.pngnote.book.PageInfo
 import io.github.karino2.pngnote.ui.CanvasSupernote
 import io.github.karino2.pngnote.ui.UndoableBackend
-import io.github.karino2.pngnote.ui.theme.PngNoteTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Date
-import kotlin.concurrent.withLock
 import kotlin.time.Duration.Companion.milliseconds
 
-
-class BookActivity : ComponentActivity() {
-    private lateinit var dirUrl : Uri
+class BookActivity : AppCompatActivity() {
+    private lateinit var dirUrl: Uri
     private var initialPageIdx = 0
 
     private val bookDir by lazy {
@@ -70,13 +38,14 @@ class BookActivity : ComponentActivity() {
 
     private val bookIO by lazy { BookIO(contentResolver) }
 
-    private var _book : Book? = null
+    private var _book: Book? = null
     set(newbook) {
         field = newbook
-        pageNum.value = newbook?.pageNum ?: 0
+        pageNum = newbook?.pageNum ?: 0
+        updateUI()
     }
 
-    private val book : Book
+    private val book: Book
     get() {
         _book?.let { return it }
         bookIO.loadBook(bookDir).also {
@@ -87,52 +56,61 @@ class BookActivity : ComponentActivity() {
 
     private fun showMessage(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
 
-
-    private val initCount = mutableStateOf(0)
-
-    private val pageInfoState = mutableStateOf(PageInfo(initialPageIdx, false))
-
-    private val pageNum = mutableStateOf(0)
-    private val restartCount = mutableStateOf(0)
-    private val closeCount = mutableStateOf(0)
-    private val tryRawDrawing = mutableStateOf(0)
-    private val canRedo = mutableStateOf(false)
-    private val undoCount = mutableStateOf(0)
-    private val redoCount = mutableStateOf(0)
-    private val refreshCount = mutableStateOf(0)
+    private var initCount = 0
+    private var pageInfoState = PageInfo(initialPageIdx, false)
+    private var pageNum = 0
+    private var restartCount = 0
+    private var closeCount = 0
+    private var tryRawDrawing = 0
+    private var canRedo = false
+    private var undoCount = 0
+    private var redoCount = 0
+    private var refreshCount = 0
 
     private var lastWritten = -1L
     private var emptyBmp: Bitmap? = null
-
-
     private var isDirty = false
-
-    private var lastUpdatedPageInfo = pageInfoState.value.copy()
+    private var lastUpdatedPageInfo = pageInfoState.copy()
 
     private val backend = UndoableBackend()
+    private lateinit var canvasSupernote: CanvasSupernote
+
+    // UI Views
+    private lateinit var btnPen: ImageButton
+    private lateinit var btnEraser: ImageButton
+    private lateinit var btnUndo: ImageButton
+    private lateinit var btnRedo: ImageButton
+    private lateinit var btnShiftHalf: ImageButton
+    private lateinit var btnGrid: ImageButton
+    private lateinit var btnFirstPage: ImageButton
+    private lateinit var btnPrevPage: ImageButton
+    private lateinit var tvPageNum: TextView
+    private lateinit var btnNextPage: ImageButton
+    private lateinit var btnLastPage: ImageButton
+    private lateinit var btnAddPage: ImageButton
+    private lateinit var btnShare: ImageButton
+
+    private var isEraser = false
 
     private fun notifyBitmapUpdate() {
         isDirty = true
         lastWritten = getCurrentMills()
-
-        lastUpdatedPageInfo = pageInfoState.value.copy()
+        lastUpdatedPageInfo = pageInfoState.copy()
         lazySave()
     }
 
-
     private var canUndo = false
     private fun notifyUndoStateChanged(canUndo1: Boolean, canRedo1: Boolean) {
-        val needRefresh = (canRedo.value != canRedo1)
-
+        val needRefresh = (canRedo != canRedo1)
         canUndo = canUndo1
-        canRedo.value = canRedo1
-
-        if(needRefresh) {
-            refreshCount.value = refreshCount.value + 1
+        canRedo = canRedo1
+        if (needRefresh) {
+            refreshCount++
         }
+        updateUI()
     }
 
-    private fun getCurrentMills() = (Date()).time
+    private fun getCurrentMills() = Date().time
 
     private suspend fun savePageData(pageInfo: PageInfo, pageBmp: Bitmap?) {
         bookIO.saveBitmap(book, pageInfo.idx, pageInfo.shift, pageBmp!!)
@@ -141,17 +119,14 @@ class BookActivity : ComponentActivity() {
         }
     }
 
-    private inline fun <T> withLock(block: () -> T): T? = backend?.withLock(block)
+    private inline fun <T> withLock(block: () -> T): T? = backend.withLock(block)
 
-
-    // same as savePage, but blocking in Main thread.
     private fun saveBackendToPageInMain(pageInfo: PageInfo) {
         withLock {
-            saveBitmapAsPageInMain(pageInfo.idx, pageInfo.shift, backend?.bitmap!!)
+            saveBitmapAsPageInMain(pageInfo.idx, pageInfo.shift, backend.bitmap)
         }
     }
 
-    // pageBmpのロックはしないので呼ぶ側で排他制御する事。
     private fun saveBitmapAsPageInMain(pageIdx: Int, shift: Boolean, pageBmp: Bitmap) {
         bookIO.saveBitmap(book, pageIdx, shift, pageBmp)
         _book = book.assignNonEmpty(pageIdx)
@@ -161,10 +136,9 @@ class BookActivity : ComponentActivity() {
     private fun lazySave() {
         lifecycleScope.launch(Dispatchers.IO) {
             delay(SAVE_INTERVAL_MILL.milliseconds)
-            if (isDirty && (getCurrentMills()- lastWritten) >= SAVE_INTERVAL_MILL) {
+            if (isDirty && (getCurrentMills() - lastWritten) >= SAVE_INTERVAL_MILL) {
                 val (pinfoSnapshot, bmpSnapshot) = withContext(Dispatchers.Main) {
-                    // main threadで同じタイミングで保存した人がいるか、pageIdxやshiftが新しくなっていたら最後のupdateは無視
-                    if (!isDirty || lastUpdatedPageInfo != pageInfoState.value)
+                    if (!isDirty || lastUpdatedPageInfo != pageInfoState)
                         return@withContext Pair(PageInfo(-1, false), null)
 
                     isDirty = false
@@ -179,11 +153,10 @@ class BookActivity : ComponentActivity() {
         }
     }
 
-
     private fun ensureSave() {
         if (isDirty) {
             isDirty = false
-            saveBackendToPageInMain(pageInfoState.value)
+            saveBackendToPageInMain(pageInfoState)
         }
     }
 
@@ -191,31 +164,32 @@ class BookActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        tryRawDrawing.value += 1
+        tryRawDrawing++
+        updateUI()
     }
 
     override fun onRestart() {
         super.onRestart()
-
-        restartCount.value = restartCount.value + 1
+        restartCount++
+        updateUI()
     }
 
-    // onRestart, onWindowFocusChanged, layout race condition is very complex.
-    // always try enable.
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) restartCount.value = restartCount.value + 1
+        if (hasFocus) {
+            restartCount++
+            updateUI()
+        }
     }
 
     override fun onStop() {
-        closeCount.value += 1
+        closeCount++
         ensureSave()
         super.onStop()
     }
 
-
     private fun share() {
-        closeCount.value += 1
+        closeCount++
         ensureSave()
         if (!backend.isReady) {
             return
@@ -227,15 +201,10 @@ class BookActivity : ComponentActivity() {
             }
             it.flush()
         }
-        val u = FileProvider.getUriForFile(this, applicationContext.packageName+".provider", path)
+        val u = FileProvider.getUriForFile(this, applicationContext.packageName + ".provider", path)
         shareImageUri(u)
     }
 
-
-    /**
-     * Shares the PNG image from Uri.
-     * @param uri Uri of image to share.
-     */
     private fun shareImageUri(uri: Uri) {
         val intent = Intent(Intent.ACTION_SEND)
         intent.putExtra(Intent.EXTRA_STREAM, uri)
@@ -243,48 +212,51 @@ class BookActivity : ComponentActivity() {
         intent.type = "image/png"
         startActivity(intent)
     }
+
     private fun addNewPageAndGo() {
         ensureSave()
         if (emptyBmp == null) {
-            emptyBmp = Bitmap.createBitmap(backend.width, backend.height, Bitmap.Config.ARGB_8888).apply {
+            emptyBmp = Bitmap.createBitmap(canvasSupernote.width, canvasSupernote.height, Bitmap.Config.ARGB_8888).apply {
                 eraseColor(Color.WHITE)
             }
         }
 
         _book = book.addPage()
+        val newPageIdx = pageNum - 1
+        pageInfoState = pageInfoState.copy(idx = newPageIdx)
 
-
-        val newPageIdx = pageNum.value -1
-        pageInfoState.value = pageInfoState.value.copy(idx = newPageIdx)
-
-        emptyBmp?.let {ebmp ->
-            // create empty page as last page, in this case, shift is always false regardless of UI state.
+        emptyBmp?.let { ebmp ->
             saveBitmapAsPageInMain(newPageIdx, false, ebmp)
         }
+        updateUI()
     }
 
     private fun gotoFirstPage() {
         ensureSave()
-        pageInfoState.value = PageInfo(0, false)
+        pageInfoState = PageInfo(0, false)
+        updateUI()
     }
 
     private fun gotoLastPage() {
         ensureSave()
-        pageInfoState.value = PageInfo(pageNum.value-1, false)
+        pageInfoState = PageInfo(pageNum - 1, false)
+        updateUI()
     }
 
     private fun gotoPrevPage() {
         ensureSave()
-        if (pageInfoState.value.idx >= 1) {
-            pageInfoState.value = pageInfoState.value.copy(idx = pageInfoState.value.idx-1)
+        if (pageInfoState.idx >= 1) {
+            pageInfoState = pageInfoState.copy(idx = pageInfoState.idx - 1)
+            updateUI()
         }
     }
 
     private fun gotoNextPage() {
         ensureSave()
-        val newPageIdx = pageInfoState.value.idx+1
-        val shiftHalf =  if (newPageIdx+1 == pageNum.value) { false } else { pageInfoState.value.shift }
-        pageInfoState.value = pageInfoState.value.copy(idx = newPageIdx, shift=shiftHalf)
+        val newPageIdx = pageInfoState.idx + 1
+        val shiftHalf = if (newPageIdx + 1 == pageNum) { false } else { pageInfoState.shift }
+        pageInfoState = pageInfoState.copy(idx = newPageIdx, shift = shiftHalf)
+        updateUI()
     }
 
     private fun gotoGridPage() {
@@ -294,7 +266,7 @@ class BookActivity : ComponentActivity() {
         }
     }
 
-    var finishListener : ()->Unit = {}
+    var finishListener: () -> Unit = {}
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -306,169 +278,165 @@ class BookActivity : ComponentActivity() {
 
         intent?.let {
             dirUrl = it.data!!
-
             handlePageIdxArg(it)
         }
 
-        setContent {
-            PngNoteTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(color = MaterialTheme.colors.background) {
-                    Column {
-                        var isEraser by remember { mutableStateOf(false) }
+        setContentView(R.layout.activity_book)
 
-                        TopAppBar(title={
-                            Row(modifier=Modifier.weight(4f), verticalAlignment = Alignment.CenterVertically) {
-                                IconToggleButton(checked = !isEraser, onCheckedChange = {
-                                    isEraser = false
-                                } ) {
-                                    val icon = if (isEraser) Icons.Outlined.Edit else Icons.Filled.Edit
-                                    val alpha = if (isEraser) LocalContentAlpha.current*0.7f else LocalContentAlpha.current
-                                    Icon(
-                                        icon,
-                                        contentDescription = "Pen",
-                                        tint = LocalContentColor.current.copy(alpha = alpha)
-                                    )
-                                }
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationOnClickListener {
+            finishListener()
+            ensureSave()
+            finish()
+        }
 
-                                Spacer(modifier=Modifier.width(10.dp))
-                                IconToggleButton(
-                                    modifier=Modifier.size(26.dp),
-                                    checked = isEraser, onCheckedChange = {
-                                    isEraser = true
-                                } ) {
-                                    Image(painter = painterResource(if(isEraser) R.mipmap.eraser_button_selected else R.mipmap.eraser_button),
-                                        contentDescription = "Eraser")
-                                }
-                                Spacer(modifier=Modifier.width(20.dp))
+        btnPen = findViewById(R.id.btnPen)
+        btnEraser = findViewById(R.id.btnEraser)
+        btnUndo = findViewById(R.id.btnUndo)
+        btnRedo = findViewById(R.id.btnRedo)
+        btnShiftHalf = findViewById(R.id.btnShiftHalf)
+        btnGrid = findViewById(R.id.btnGrid)
+        btnFirstPage = findViewById(R.id.btnFirstPage)
+        btnPrevPage = findViewById(R.id.btnPrevPage)
+        tvPageNum = findViewById(R.id.tvPageNum)
+        btnNextPage = findViewById(R.id.btnNextPage)
+        btnLastPage = findViewById(R.id.btnLastPage)
+        btnAddPage = findViewById(R.id.btnAddPage)
+        btnShare = findViewById(R.id.btnShare)
 
-                                IconButton(onClick={
-                                    if(canUndo) {
-                                        undoCount.value += 1
-                                    } else {
-                                        showMessage("Not yet undo-able.")
-                                    }
-                                   }, enabled=true) {
-                                    Icon(painter = painterResource(id = R.drawable.outline_undo), contentDescription = "Undo")
-                                }
-                                IconButton(onClick={ redoCount.value += 1 },
-                                    enabled = canRedo.value
-                                ) {
-                                    Icon(painter = painterResource(id = R.drawable.outline_redo), contentDescription = "Redo")
-                                }
-                            }
-                            Row(modifier=Modifier.weight(6f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-                                IconToggleButton(checked = pageInfoState.value.shift, onCheckedChange= {
-                                    ensureSave()
-                                    pageInfoState.value = pageInfoState.value.copy(shift=it)
-                                }) {
-                                    val iconId = if (pageInfoState.value.shift) R.drawable.baseline_shift_half else R.drawable.outline_shift_half
-                                    Icon(
-                                        painter = painterResource(id = iconId),
-                                        contentDescription = "Shift Half",
-                                        tint = androidx.compose.ui.graphics.Color.Unspecified
-                                    )
-                                }
-                                IconButton(onClick= { gotoGridPage() }) {
-                                    Icon(painter = painterResource(id = R.drawable.baseline_grid_view), contentDescription="Grid")
-                                }
-                                IconButton(modifier=Modifier.size(24.dp), onClick={ gotoFirstPage() }, enabled= !pageInfoState.value.isFirstPage) {
-                                    Icon(painter = painterResource(id = R.drawable.outline_first_page), contentDescription = "First Page")
-                                }
-                                IconButton(modifier=Modifier.size(24.dp), onClick={ gotoPrevPage() }, enabled= !pageInfoState.value.isFirstPage) {
-                                    Icon(painter = painterResource(id = R.drawable.baseline_chevron_left), contentDescription = "Prev Page")
-                                }
-                                val pidx = pageInfoState.value.idx + 1
-                                val pnum = pageNum.value
-                                if (pageInfoState.value.shift)
-                                {
-                                    Text("$pidx.5/$pnum")
-                                }
-                                else
-                                {
-                                    Text("$pidx/$pnum")
-                                }
+        btnPen.setOnClickListener {
+            isEraser = false
+            updateUI()
+        }
 
-                                val lastPage = pidx == pageNum.value
-                                IconButton(modifier=Modifier.size(24.dp), onClick={ gotoNextPage() }, enabled=!lastPage) {
-                                    Icon(painter = painterResource(id = R.drawable.baseline_chevron_right), contentDescription = "Next Page")
-                                }
-                                IconButton(modifier=Modifier.size(24.dp), onClick={ gotoLastPage() }, enabled=!lastPage) {
-                                    Icon(painter = painterResource(id = R.drawable.outline_last_page), contentDescription = "Last Page")
-                                }
+        btnEraser.setOnClickListener {
+            isEraser = true
+            updateUI()
+        }
 
-                                IconButton(onClick={ addNewPageAndGo() }, enabled = true) {
-                                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Page")
-                                }
-                                IconButton(onClick={ share() }, enabled = true) {
-                                    Icon(imageVector = Icons.Default.Share, contentDescription = "Share")
-                                }
-                            }
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = {
-                                finishListener()
-                                ensureSave()
-                                finish()
-                            }) {
-                                Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
-                            }
-                        })
-                        BoxWithConstraints {
-                            val initState = initCount.value
-                            AndroidView(modifier = Modifier.size(maxWidth, maxHeight),
-                                factory = {context->
-                                    val initBmp = bookIO.loadBitmapOrNull(book, pageInfoState.value)
-                                    val bgBmp = bookIO.loadBgOrNull(book)
-                                    CanvasSupernote(context, backend, initBmp, bgBmp, initialPageIdx).apply {
-                                        clipToOutline = true
-                                        firstInit()
-                                        setOnUpdateListener { notifyBitmapUpdate() }
-                                        setOnUndoStateListener { undo, redo-> notifyUndoStateChanged(undo, redo) }
-                                        finishListener = { onFinish() }
-                                    }
-                                },
-                                update = {
-                                    it.ensureInit(initState)
-                                    it.penOrEraser(!isEraser)
-                                    it.onPageIdx(pageInfoState.value, bitmapLoader= { pinfo ->
-                                        bookIO.loadBitmapOrNull(book, pinfo).also {
-                                            isDirty = false
-                                            if(it == null) {
-                                                backend.clear()
-                                            }
-                                            else {
-                                                backend.drawBitmap(it)
-                                            }
-                                        }
-                                    })
-                                    it.onRestart(restartCount.value)
-                                    it.onEnsureClose(closeCount.value)
-                                    it.onTryRawDrawing(tryRawDrawing.value)
-                                    it.undo(undoCount.value)
-                                    it.redo(redoCount.value)
-                                    it.refreshUI(refreshCount.value)
-                                }
-                            )
-                        }
-
-                    }
-                }
+        btnUndo.setOnClickListener {
+            if (canUndo) {
+                undoCount++
+                updateUI()
+            } else {
+                showMessage("Not yet undo-able.")
             }
         }
 
-        // need to delay until onMeasure done. It might not be enough, but work for most of the time.
-        handler.post {
-            initCount.value = 1
+        btnRedo.setOnClickListener {
+            if (canRedo) {
+                redoCount++
+                updateUI()
+            }
         }
 
+        btnShiftHalf.setOnClickListener {
+            ensureSave()
+            pageInfoState = pageInfoState.copy(shift = !pageInfoState.shift)
+            updateUI()
+        }
+
+        btnGrid.setOnClickListener {
+            gotoGridPage()
+        }
+
+        btnFirstPage.setOnClickListener {
+            gotoFirstPage()
+        }
+
+        btnPrevPage.setOnClickListener {
+            gotoPrevPage()
+        }
+
+        btnNextPage.setOnClickListener {
+            gotoNextPage()
+        }
+
+        btnLastPage.setOnClickListener {
+            gotoLastPage()
+        }
+
+        btnAddPage.setOnClickListener {
+            addNewPageAndGo()
+        }
+
+        btnShare.setOnClickListener {
+            share()
+        }
+
+        val canvasContainer = findViewById<FrameLayout>(R.id.canvasContainer)
+        val initBmp = bookIO.loadBitmapOrNull(book, pageInfoState)
+        val bgBmp = bookIO.loadBgOrNull(book)
+        canvasSupernote = CanvasSupernote(this, backend, initBmp, bgBmp, initialPageIdx).apply {
+            clipToOutline = true
+            firstInit()
+            setOnUpdateListener { notifyBitmapUpdate() }
+            setOnUndoStateListener { undo, redo -> notifyUndoStateChanged(undo, redo) }
+            finishListener = { onFinish() }
+        }
+        canvasContainer.addView(canvasSupernote)
+
+        handler.post {
+            initCount = 1
+            updateUI()
+        }
+    }
+
+    private fun updateUI() {
+        if (!::canvasSupernote.isInitialized) return
+
+        btnPen.alpha = if (isEraser) 0.3f else 1.0f
+        btnEraser.setImageResource(if (isEraser) R.mipmap.eraser_button_selected else R.mipmap.eraser_button)
+
+        btnRedo.isEnabled = canRedo
+
+        btnShiftHalf.setImageResource(if (pageInfoState.shift) R.drawable.baseline_shift_half else R.drawable.outline_shift_half)
+
+        val pidx = pageInfoState.idx + 1
+        val pnum = pageNum
+        if (pageInfoState.shift) {
+            tvPageNum.text = "$pidx.5/$pnum"
+        } else {
+            tvPageNum.text = "$pidx/$pnum"
+        }
+
+        val isFirst = pageInfoState.isFirstPage
+        btnFirstPage.isEnabled = !isFirst
+        btnPrevPage.isEnabled = !isFirst
+
+        val lastPage = pidx == pnum
+        btnNextPage.isEnabled = !lastPage
+        btnLastPage.isEnabled = !lastPage
+
+        canvasSupernote.apply {
+            ensureInit(initCount)
+            penOrEraser(!isEraser)
+            onPageIdx(pageInfoState, bitmapLoader = { pinfo ->
+                bookIO.loadBitmapOrNull(book, pinfo).also { bmp ->
+                    this@BookActivity.isDirty = false
+                    if (bmp == null) {
+                        backend.clear()
+                    } else {
+                        backend.drawBitmap(bmp)
+                    }
+                }
+            })
+            onRestart(restartCount)
+            onEnsureClose(closeCount)
+            onTryRawDrawing(tryRawDrawing)
+            undo(undoCount)
+            redo(redoCount)
+            refreshUI(refreshCount)
+        }
     }
 
     private fun handlePageIdxArg(intent: Intent) {
         val argPageIdx = intent.getIntExtra("PAGE_IDX", -1)
         if (argPageIdx != -1) {
             initialPageIdx = argPageIdx
+            pageInfoState = pageInfoState.copy(idx = initialPageIdx)
         }
     }
 }
-

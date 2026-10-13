@@ -3,18 +3,14 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- 内部：ごく薄いグレー -->
+    <!-- 上下の半矩形：白のツールバー背景より少しだけ濃い薄いグレー（#FFEAEAEA または #FFE0E0E0） -->
     <path
-        android:fillColor="#FFF5F5F5"
-        android:pathData="M5,0h13v24h-13z" />
+        android:fillColor="#FFEAEAEA"
+        android:pathData="M4,1h16v10h-16z M4,13h16v10h-16z" />
 
-    <!-- 左右の縁：薄いグレー -->
+    <!-- 枠線 -->
     <path
-        android:fillColor="#FFCCCCCC"
-        android:pathData="M5,0h1v24h-1z M18,0h1v24h-1z" />
-
-    <!-- 中央の境界線：薄いグレー -->
-    <path
-        android:fillColor="#FFCCCCCC"
-        android:pathData="M5,11.5h14v1h-14z" />
+        android:strokeColor="#FFB0B0B0"
+        android:strokeWidth="1.2"
+        android:pathData="M4,1h16v10h-16z M4,13h16v10h-16z" />
 </vector>

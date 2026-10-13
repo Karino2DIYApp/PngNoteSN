@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Pencil body outline -->
+  <path
+      android:strokeColor="@android:color/black"
+      android:strokeWidth="2"
+      android:strokeLineJoin="round"
+      android:pathData="M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25z"/>
+  <path
+      android:strokeColor="@android:color/black"
+      android:strokeWidth="2"
+      android:strokeLineJoin="round"
+      android:pathData="M20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z"/>
+  <!-- Pen tip filled black -->
+  <path
+      android:fillColor="@android:color/black"
+      android:pathData="M3,17.25L6.75,21L3,21Z"/>
+  <!-- Two thick grip lines on the handle -->
+  <path
+      android:strokeColor="@android:color/black"
+      android:strokeWidth="3"
+      android:strokeLineCap="round"
+      android:pathData="M8,15L12,11 M10,17L14,13"/>
+</vector>
