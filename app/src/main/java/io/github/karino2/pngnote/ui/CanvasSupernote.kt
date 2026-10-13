@@ -16,6 +16,8 @@ import io.github.karino2.supernote.EinkPixelWriter
 import io.github.karino2.supernote.PenType
 import java.util.Date
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 @SuppressLint("ViewConstructor")
 class CanvasSupernote(context: Context, private val backend: UndoableBackend, var initialBmp: Bitmap? = null, private val background: Bitmap?, initialPageIdx:Int  = 0) : View(context) {
@@ -62,11 +64,20 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
         }
     }
 
+    fun boundTo(rect: Rect, target: Bitmap) : Rect {
+        val left = max(0, rect.left)
+        val top = max(0, rect.top)
+        val right = min(target.width, rect.right)
+        val bottom = min(target.height, rect.bottom)
+        return Rect(left, top, right, bottom)
+    }
+
     fun onHardwareStrokeFinished(bitmap: Bitmap, dirty: Rect) {
-        backend.updateRegion(bitmap, dirty)
+        // dirty.topは外まで行く場合があり、その場合マイナスになる。
+        val hostDirty = backend.withLock { boundTo(dirty, backend.bitmap) }
+        backend.updateRegion(bitmap, hostDirty)
         // これが無いとrefreshした時にクリアされたバックエンドのバッファで上書きされてしまう。
         einkPW.clearTransient(dirty)
-        // isBackendDirty = true
     }
 
     /*
