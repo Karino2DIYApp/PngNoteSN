@@ -56,16 +56,9 @@ class BookActivity : AppCompatActivity() {
 
     private fun showMessage(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
 
-    private var initCount = 0
     private var pageInfoState = PageInfo(initialPageIdx, false)
     private var pageNum = 0
-    private var restartCount = 0
-    private var closeCount = 0
-    private var tryRawDrawing = 0
     private var canRedo = false
-    private var undoCount = 0
-    private var redoCount = 0
-    private var refreshCount = 0
 
     private var lastWritten = -1L
     private var emptyBmp: Bitmap? = null
@@ -104,12 +97,8 @@ class BookActivity : AppCompatActivity() {
 
     private var canUndo = false
     private fun onUndoStateUpdate(canUndo1: Boolean, canRedo1: Boolean) {
-        val needRefresh = (canRedo != canRedo1)
         canUndo = canUndo1
         canRedo = canRedo1
-        if (needRefresh) {
-            refreshCount++
-        }
         updateUI()
     }
 
@@ -126,6 +115,7 @@ class BookActivity : AppCompatActivity() {
             } else {
                 backend.setupNewBitmap(bmp)
             }
+            canvasSupernote.onPageIdx(pageInfoState)
         }
     }
 
@@ -183,32 +173,29 @@ class BookActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        tryRawDrawing++
-        updateUI()
+        canvasSupernote.applyRawDrawingSettings()
     }
 
     override fun onRestart() {
         super.onRestart()
-        restartCount++
-        updateUI()
+        canvasSupernote.applyRawDrawingSettings()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            restartCount++
-            updateUI()
+            canvasSupernote.onRestart()
         }
     }
 
     override fun onStop() {
-        closeCount++
+        canvasSupernote.closeRawRendering()
         ensureSave()
         super.onStop()
     }
 
     private fun share() {
-        closeCount++
+        canvasSupernote.closeRawRendering()
         ensureSave()
         if (!backend.isReady) {
             return
@@ -327,18 +314,19 @@ class BookActivity : AppCompatActivity() {
 
         btnPen.setOnClickListener {
             isEraser = false
+            canvasSupernote.pencil()
             updateUI()
         }
 
         btnEraser.setOnClickListener {
             isEraser = true
+            canvasSupernote.eraser()
             updateUI()
         }
 
         btnUndo.setOnClickListener {
             if (canUndo) {
-                undoCount++
-                updateUI()
+                canvasSupernote.undo()
             } else {
                 showMessage("Not yet undo-able.")
             }
@@ -346,8 +334,7 @@ class BookActivity : AppCompatActivity() {
 
         btnRedo.setOnClickListener {
             if (canRedo) {
-                redoCount++
-                updateUI()
+                canvasSupernote.redo()
             }
         }
 
@@ -395,10 +382,10 @@ class BookActivity : AppCompatActivity() {
             finishListener = { onFinish() }
         }
         canvasContainer.addView(canvasSupernote)
+        updateUI()
 
         handler.post {
-            initCount = 1
-            updateUI()
+            canvasSupernote.applyRawDrawingSettings()
         }
     }
 
@@ -427,18 +414,6 @@ class BookActivity : AppCompatActivity() {
         val lastPage = pidx == pnum
         btnNextPage.isEnabled = !lastPage
         btnLastPage.isEnabled = !lastPage
-
-        canvasSupernote.apply {
-            ensureInit(initCount)
-            penOrEraser(!isEraser)
-            onPageIdx(pageInfoState)
-            onRestart(restartCount)
-            onEnsureClose(closeCount)
-            onTryRawDrawing(tryRawDrawing)
-            undo(undoCount)
-            redo(redoCount)
-            refreshUI(refreshCount)
-        }
     }
 
     private fun handlePageIdxArg(intent: Intent) {

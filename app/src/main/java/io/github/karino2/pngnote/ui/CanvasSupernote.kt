@@ -45,23 +45,14 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
 
     private val bmpPaintWithBG = Paint(Paint.DITHER_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY) }
 
-    private var undoCount = 0
-    private var redoCount = 0
-
-    fun undo(count : Int) {
-        if (undoCount != count) {
-            undoCount = count
-            backend.undo()
-            refreshAfterUndoRedo()
-        }
+    fun undo() {
+        backend.undo()
+        refreshAfterUndoRedo()
     }
 
-    fun redo(count: Int) {
-        if(redoCount != count) {
-            redoCount = count
-            backend.redo()
-            refreshAfterUndoRedo()
-        }
+    fun redo() {
+        backend.redo()
+        refreshAfterUndoRedo()
     }
 
     fun boundTo(rect: Rect, target: Bitmap) : Rect {
@@ -99,8 +90,6 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
         syncBackendToSurface()
     }
 
-    private var initCount = 0
-
     private var lastOpenedLimit: Rect? = null
 
     private fun visibleRect(): Rect {
@@ -124,7 +113,7 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
         einkPW.setPen(PenType.INK, pwidth, pcolor)
     }
 
-    private fun applyRawDrawingSettings() {
+    fun applyRawDrawingSettings() {
         val limit = visibleRect()
         if (limit.width() <= 0 || limit.height() <= 0) return
 
@@ -206,52 +195,23 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
 
     }
 
-    fun ensureInit(callCount: Int) {
-        if(callCount == 1 && initCount != 1) {
-            initCount = 1
-            applyRawDrawingSettings()
-        }
-    }
-
     // Supernoteでは特にfirst特有の処理は無いが、
     // BOOXとコードをあわせるためこのメソッドでraw drawingをenableする。
     fun firstInit() {
         requestDelaySync()
     }
 
-    private var restartCount = 0
-
-    fun onRestart(count: Int) {
-        if (count != restartCount) {
-            syncBackendToSurface()
-            applyRawDrawingSettings()
-
-            restartCount = count
-        }
+    fun onRestart() {
+        syncBackendToSurface()
+        applyRawDrawingSettings()
     }
 
-    private var tryRawDrawingCount = 0
-
-    fun onTryRawDrawing(count: Int) {
-        if (count != tryRawDrawingCount) {
-            applyRawDrawingSettings()
-            tryRawDrawingCount = count
-        }
+    fun closeRawRendering() {
+        ensureCloseRawRendering()
+        syncBackendToSurface()
     }
 
-
-    private var ensureCloseCount = 0
-
-    fun onEnsureClose(count: Int) {
-        if (count != ensureCloseCount) {
-            ensureCloseRawRendering()
-            syncBackendToSurface()
-
-            ensureCloseCount = count
-        }
-    }
-
-    private fun pencil() {
+    fun pencil() {
         if (isPencil)
             return
         isPencil = true
@@ -259,7 +219,7 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
         applyPenSettingChanged()
     }
 
-    private fun eraser() {
+    fun eraser() {
         if (isEraser)
             return
         isPencil = false
@@ -267,27 +227,9 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
         applyPenSettingChanged()
     }
 
-    fun penOrEraser(isPen: Boolean ) {
-        if(isPen == isPencil)
-            return
-        if (isPen) {
-            pencil()
-        } else {
-            eraser()
-        }
-    }
-
     private fun applyPenSettingChanged() {
         setPen(strokeWidth, strokeColor)
         syncBackendToSurface()
-    }
-
-    private var refreshCount = 0
-    fun refreshUI(count: Int) {
-        if(refreshCount != count) {
-            syncBackendToSurface()
-            refreshCount = count
-        }
     }
 
     fun withTempNoRawRendering(f: ()->Unit) {
