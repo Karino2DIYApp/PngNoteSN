@@ -30,11 +30,11 @@ class UndoableBackend {
     inline fun <T> withLock(block: () -> T): T = bmpBackend.bitmapLock.withLock(block)
 
 
-    fun notifyBitmapUpdate() {
+    private fun notifyBitmapUpdate() {
         updateBmpListener()
     }
 
-    fun notifyUndoStateChanged() {
+    private fun notifyUndoStateChanged() {
         undoStateListener(canUndo, canRedo)
     }
 
@@ -56,12 +56,19 @@ class UndoableBackend {
         bmpBackend.withLock {
             undoList.undo(bmpBackend.canvas)
         }
+        afterUndoRedoChange()
     }
 
     fun redo() {
         bmpBackend.withLock {
             undoList.redo(bmpBackend.canvas)
         }
+        afterUndoRedoChange()
+    }
+
+    fun afterUndoRedoChange() {
+        notifyBitmapUpdate()
+        notifyUndoStateChanged()
     }
 
     fun updateRegion(newBmp: Bitmap, region: Rect) {
@@ -85,8 +92,7 @@ class UndoableBackend {
         }
         pushUndoCommand(region.left, region.top, undo, redo)
 
-        notifyBitmapUpdate()
-        notifyUndoStateChanged()
+        afterUndoRedoChange()
         /*
         bmpBackend.drawBitmap(newBmp, region, region)
         notifyBitmapUpdate()
@@ -104,34 +110,15 @@ class UndoableBackend {
         return Pair(bitmap, bmpBackend.canvas)
     }
 
-    fun cleanInit(width: Int, height: Int, initialBmp: Bitmap?) {
-        initialBmp?.let {
-            bmpBackend.drawBitmap(it,
-                Rect(0, 0, it.width, it.height),
-                Rect(0, 0, width, height))
-        }
-        notifyBitmapUpdate()
-    }
+    fun setupNewBitmap(newBmp: Bitmap) {
+        clearUndo()
 
-    fun drawBitmap(newBmp: Bitmap) {
         if (!bmpbackendInitialized)
             ensureSize(newBmp.width, newBmp.height)
 
+        bmpBackend.clear()
         bmpBackend.drawBitmap(newBmp)
     }
     fun clear() = bmpBackend.clear()
     fun resize(width: Int, height: Int) = ensureSize(width, height)
-
-    fun setupNewPage(width: Int, height: Int, newBmp: Bitmap?) {
-        val (offscreenBmp, canvas) = ensureSize(width, height)
-        bmpBackend.clear()
-        newBmp?.let {
-            bmpBackend.drawBitmap(it,
-                Rect(0, 0, it.width, it.height),
-                Rect(0, 0, width, height))
-        }
-        clearUndo()
-        notifyUndoStateChanged()
-        notifyBitmapUpdate()
-    }
 }

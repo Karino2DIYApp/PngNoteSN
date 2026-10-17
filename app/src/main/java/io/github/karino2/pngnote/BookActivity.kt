@@ -72,7 +72,10 @@ class BookActivity : AppCompatActivity() {
     private var isDirty = false
     private var lastUpdatedPageInfo = pageInfoState.copy()
 
-    private val backend = UndoableBackend()
+    private val backend = UndoableBackend().apply {
+        updateBmpListener = { onBitmapUpdate() }
+        undoStateListener = { undo, redo -> onUndoStateUpdate(undo, redo) }
+    }
     private lateinit var canvasSupernote: CanvasSupernote
 
     // UI Views
@@ -92,7 +95,7 @@ class BookActivity : AppCompatActivity() {
 
     private var isEraser = false
 
-    private fun notifyBitmapUpdate() {
+    private fun onBitmapUpdate() {
         isDirty = true
         lastWritten = getCurrentMills()
         lastUpdatedPageInfo = pageInfoState.copy()
@@ -100,7 +103,7 @@ class BookActivity : AppCompatActivity() {
     }
 
     private var canUndo = false
-    private fun notifyUndoStateChanged(canUndo1: Boolean, canRedo1: Boolean) {
+    private fun onUndoStateUpdate(canUndo1: Boolean, canRedo1: Boolean) {
         val needRefresh = (canRedo != canRedo1)
         canUndo = canUndo1
         canRedo = canRedo1
@@ -108,6 +111,22 @@ class BookActivity : AppCompatActivity() {
             refreshCount++
         }
         updateUI()
+    }
+
+    private fun updatePageInfo(pageInfo: PageInfo) {
+        if (pageInfo == pageInfoState)
+            return
+
+        ensureSave()
+        bookIO.loadBitmapOrNull(book, pageInfo).also { bmp ->
+            pageInfoState = pageInfo
+            this@BookActivity.isDirty = false
+            if (bmp == null) {
+                backend.clear()
+            } else {
+                backend.setupNewBitmap(bmp)
+            }
+        }
     }
 
     private fun getCurrentMills() = Date().time
@@ -223,7 +242,7 @@ class BookActivity : AppCompatActivity() {
 
         _book = book.addPage()
         val newPageIdx = pageNum - 1
-        pageInfoState = pageInfoState.copy(idx = newPageIdx)
+        updatePageInfo(pageInfoState.copy(idx = newPageIdx))
 
         emptyBmp?.let { ebmp ->
             saveBitmapAsPageInMain(newPageIdx, false, ebmp)
@@ -233,20 +252,20 @@ class BookActivity : AppCompatActivity() {
 
     private fun gotoFirstPage() {
         ensureSave()
-        pageInfoState = PageInfo(0, false)
+        updatePageInfo(PageInfo(0, false))
         updateUI()
     }
 
     private fun gotoLastPage() {
         ensureSave()
-        pageInfoState = PageInfo(pageNum - 1, false)
+        updatePageInfo(PageInfo(pageNum - 1, false))
         updateUI()
     }
 
     private fun gotoPrevPage() {
         ensureSave()
         if (pageInfoState.idx >= 1) {
-            pageInfoState = pageInfoState.copy(idx = pageInfoState.idx - 1)
+            updatePageInfo(pageInfoState.copy(idx = pageInfoState.idx - 1))
             updateUI()
         }
     }
@@ -255,7 +274,7 @@ class BookActivity : AppCompatActivity() {
         ensureSave()
         val newPageIdx = pageInfoState.idx + 1
         val shiftHalf = if (newPageIdx + 1 == pageNum) { false } else { pageInfoState.shift }
-        pageInfoState = pageInfoState.copy(idx = newPageIdx, shift = shiftHalf)
+        updatePageInfo(pageInfoState.copy(idx = newPageIdx, shift = shiftHalf))
         updateUI()
     }
 
@@ -334,7 +353,7 @@ class BookActivity : AppCompatActivity() {
 
         btnShiftHalf.setOnClickListener {
             ensureSave()
-            pageInfoState = pageInfoState.copy(shift = !pageInfoState.shift)
+            updatePageInfo(pageInfoState.copy(shift = !pageInfoState.shift))
             updateUI()
         }
 
@@ -369,11 +388,10 @@ class BookActivity : AppCompatActivity() {
         val canvasContainer = findViewById<FrameLayout>(R.id.canvasContainer)
         val initBmp = bookIO.loadBitmapOrNull(book, pageInfoState)
         val bgBmp = bookIO.loadBgOrNull(book)
+        initBmp?.let { backend.setupNewBitmap(it) }
         canvasSupernote = CanvasSupernote(this, backend, initBmp, bgBmp, initialPageIdx).apply {
             clipToOutline = true
             firstInit()
-            setOnUpdateListener { notifyBitmapUpdate() }
-            setOnUndoStateListener { undo, redo -> notifyUndoStateChanged(undo, redo) }
             finishListener = { onFinish() }
         }
         canvasContainer.addView(canvasSupernote)
@@ -413,16 +431,7 @@ class BookActivity : AppCompatActivity() {
         canvasSupernote.apply {
             ensureInit(initCount)
             penOrEraser(!isEraser)
-            onPageIdx(pageInfoState, bitmapLoader = { pinfo ->
-                bookIO.loadBitmapOrNull(book, pinfo).also { bmp ->
-                    this@BookActivity.isDirty = false
-                    if (bmp == null) {
-                        backend.clear()
-                    } else {
-                        backend.drawBitmap(bmp)
-                    }
-                }
-            })
+            onPageIdx(pageInfoState)
             onRestart(restartCount)
             onEnsureClose(closeCount)
             onTryRawDrawing(tryRawDrawing)
@@ -436,7 +445,7 @@ class BookActivity : AppCompatActivity() {
         val argPageIdx = intent.getIntExtra("PAGE_IDX", -1)
         if (argPageIdx != -1) {
             initialPageIdx = argPageIdx
-            pageInfoState = pageInfoState.copy(idx = initialPageIdx)
+            updatePageInfo(pageInfoState.copy(idx = initialPageIdx))
         }
     }
 }

@@ -94,8 +94,6 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
 
 
     private fun refreshAfterUndoRedo() {
-        backend.notifyBitmapUpdate()
-        backend.notifyUndoStateChanged()
         syncBackendToSurface()
     }
 
@@ -185,7 +183,7 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
             applyRawDrawingSettings()
         }
         initialBmp?.let {
-            backend.drawBitmap(it)
+            backend.setupNewBitmap(it)
             initialBmp = null
         }
     }
@@ -332,27 +330,11 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
         invalidate()
     }
 
-    private var pageIdx = initialPageIdx
 
-    fun onPageIdx(pageInfo: PageInfo, bitmapLoader: (PageInfo)->Bitmap?) {
-        if(pageIdx == pageInfo.idx && pageInfo.shift == this.shiftHalf)
-            return
-
-        pageIdx = pageInfo.idx
+    fun onPageIdx(pageInfo: PageInfo) {
         this.shiftHalf = pageInfo.shift
 
-        val newbmp = bitmapLoader(pageInfo)
-        backend.setupNewPage(width, height, newbmp)
-
         syncBackendToSurface()
-    }
-
-    fun setOnUpdateListener(updateBmpListener: () -> Unit) {
-        backend.updateBmpListener = updateBmpListener
-    }
-
-    fun setOnUndoStateListener(undoStateListener: (undo:Boolean, redo:Boolean) -> Unit) {
-        backend.undoStateListener = undoStateListener
     }
 
     fun onFinish() {
