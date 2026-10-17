@@ -333,7 +333,13 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
     }
 
 
+
+    private var _pageIdx = -1
     fun onPageIdx(pageInfo: PageInfo) {
+        if(pageInfo.idx == _pageIdx && pageInfo.shift == shiftHalf)
+            return
+
+        _pageIdx = pageInfo.idx
         this.shiftHalf = pageInfo.shift
 
         syncBackendToSurface()
