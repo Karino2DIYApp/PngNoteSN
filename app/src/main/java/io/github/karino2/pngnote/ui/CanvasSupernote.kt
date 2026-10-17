@@ -86,6 +86,8 @@ class CanvasSupernote(context: Context, private val backend: UndoableBackend, va
     ただ単にinvalidateでも良さそうな場所もあるので、あとで調べてrenameする。
      */
     private fun syncBackendToSurface() {
+        if(!backend.isReady)
+            return
         backend.withLock {
             einkPW.loadBitmap(backend.bitmap)
         }
