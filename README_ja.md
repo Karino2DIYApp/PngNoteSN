@@ -14,6 +14,8 @@ EinkPWInterfaceを使って比較的高速なスタイラスでノートがと�
 
 ## Screen shots
 
+[youtube: PngNoteSN DEMO](https://youtube.com/shorts/W_5enW563PU?feature=share)
+
 ![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/BookList.png)
 ![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/Book.png)
 ![PngNote icon](https://github.com/Karino2DIYApp/PngNoteSN/raw/main/images/PageGrid.png)
