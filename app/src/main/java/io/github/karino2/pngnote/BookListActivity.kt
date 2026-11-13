@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -205,6 +206,14 @@ fun NewBookPopup(onNewBook : (bookName: String)->Unit, onDismiss: ()->Unit) {
                         .fillMaxWidth()
                         .focusRequester(requester),
                     placeholder = { Text("New book name")})
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    modifier = Modifier.border(width = 1.dp, MaterialTheme.colors.onPrimary),
+                    colors = buttonColors,
+                    onClick = { textState = "" }
+                ) {
+                    Text("Clear")
+                }
                 DisposableEffect(Unit) {
                     requester.requestFocus()
                     onDispose {}
